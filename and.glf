@@ -32,4 +32,4 @@ NODE E (SWAP E) E E
 
 END
 CUR = S
-INPUT = 00
+INPUT = 11
