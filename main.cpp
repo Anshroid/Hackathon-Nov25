@@ -1,83 +1,74 @@
-#include<bits/stdc++.h>
+#include <bits/stdc++.h>
 using namespace std;
+
 #define PUSH 0
 #define SWAP 1
 #define N 2020
+
 map<string,int> mp;
 string var[N];
-queue<bool> input,output;
+queue<bool> input, output;
+
 struct ins{
-    int op,x,y;
+    int op, x, y;
     void print(){
-        if(op==PUSH)printf("PUSH %s %s",var[x].c_str(),var[y].c_str());
-        else printf("SWAP %s",var[x].c_str());
+        if(op == PUSH) printf("PUSH %s %s", var[x].c_str(), var[y].c_str());
+        else           printf("SWAP %s", var[x].c_str());
     }
 };
+
 struct node{
     ins i;
-    int p0,p1;
+    int p0, p1;
 };
+
 struct program{
     node d[N];
-    int S,I,O0,O1,n,size;
+    int S, I, O0, O1, n, size;
+
     void step(){
-        if(n==I){
+        if(n == I){
+            // assumes input is non-empty when visiting I
             bool x = input.front();
             input.pop();
-            n = x?(d[I].p0):(d[I].p1);
+            n = x ? d[I].p1 : d[I].p0;
             return;
-        }else if(n==O0){
+        }else if(n == O0){
             output.push(0);
-        }else if(n==O1){
+        }else if(n == O1){
             output.push(1);
         }else{
             ins cur_i = d[n].i;
             if(cur_i.op == PUSH){
                 d[cur_i.x].p0 = d[cur_i.x].p1;
                 d[cur_i.x].p1 = cur_i.y;
-            }else{
-                swap(d[cur_i.x].p0,d[cur_i.x].p1);
+            }else{ // SWAP
+                swap(d[cur_i.x].p0, d[cur_i.x].p1);
             }
         }
         n = d[n].p0;
     }
+
     void print(bool print_machine){
         if(print_machine){
-            for(int i=0;i<size;i++){
-                printf("NODE %s(",var[i].c_str());
+            for(int i = 0; i < size; i++){
+                printf("NODE %s(", var[i].c_str());
                 d[i].i.print();
-                printf("), p0 = %s, p1 = %s \n",var[d[i].p0].c_str(),var[d[i].p1].c_str());
+                printf("), p0 = %s, p1 = %s \n", var[d[i].p0].c_str(), var[d[i].p1].c_str());
             }
             printf("END\n");
         }
         printf("CUR = %s \n", var[n].c_str());
         printf("-------------------------\n");
-    }/*
-    void load(){
-        FILE* fptr = fopen("input.glf", "r");
-        while(1){
-            char opstr[100],buf[100];
-            fscanf(fptr,"%s",opstr);
-            if(opstr[0]=='N'){
-                fscanf(fptr,"NODE %s(",buf);
-                string str(buf);
-                if(!mp.count(str)){
-                    mp[str]=++size;
-                }
-                int cidx = mp[str];
-                fscanf(fptr,"%s",opstr);
-                if(opstr[0]=='S'){
+    }
 
-                }else{
-
-                }
-            }else break;
-        }
-    }*/
     void load(){
-         ifstream in("input.glf");
+        ifstream in("input.glf");
         if(!in){ perror("input.glf"); return; }
 
+        // reset state
+        while(!input.empty()) input.pop();
+        while(!output.empty()) output.pop();
         mp.clear();
         size = 0;
 
@@ -88,46 +79,45 @@ struct program{
             s = s.substr(a, b - a + 1);
         };
 
+        // Create/get id for a name; default to safe node (self-loops, SWAP self)
         auto getId = [&](const string& s)->int{
             auto it = mp.find(s);
             if(it != mp.end()) return it->second;
             int id = size++;
             mp[s] = id;
             var[id] = s;
+            d[id].p0 = d[id].p1 = id; // self-loop
+            d[id].i.op = SWAP;
+            d[id].i.x  = id;          // SWAP self
+            d[id].i.y  = 0;
             return id;
         };
-
+        S = getId("S");
+        I = getId("I");
+        O0 = getId("O0");
+        O1 = getId("O1");
         string line;
-        // ---- Read NODE lines
+        // ---- Read NODE lines until END
         while (std::getline(in, line)) {
-            string orig = line;
-            trim(line);
-            if (line.empty()) continue;
-            if (line == "END") break;
-            if (line.rfind("NODE ", 0) != 0) continue;
-            S = getId("S");
-            I = getId("I");
-            O0 = getId("O0");
-            O1 = getId("O1");
-            // NODE <name>(...) rest
+            string t = line; trim(t);
+            if (t.empty()) continue;
+            if (t == "END") break;
+            if (t.rfind("NODE ", 0) != 0) continue;
+
+            // Format: NODE <name>(<op...>) <p0> <p1>
             size_t pos  = 5; // after "NODE "
-            size_t lpar = line.find('(', pos);
-            size_t rpar = (lpar == string::npos) ? string::npos : line.find(')', lpar+1);
+            size_t lpar = t.find('(', pos);
+            size_t rpar = (lpar == string::npos) ? string::npos : t.find(')', lpar+1);
             if (lpar == string::npos || rpar == string::npos) continue;
 
-            string name = line.substr(pos, lpar - pos); trim(name);
+            string name = t.substr(pos, lpar - pos); trim(name);
             int idx = getId(name);
 
-            // inside parentheses: instruction
-            string inside = line.substr(lpar+1, rpar - lpar - 1); trim(inside);
+            string inside = t.substr(lpar+1, rpar - lpar - 1); trim(inside);
 
-            // after ')': two tokens p0 p1
-            string rest = line.substr(rpar+1); trim(rest);
+            string rest = t.substr(rpar+1); trim(rest);
             string p0s, p1s;
-            {
-                stringstream rs(rest);
-                rs >> p0s >> p1s; // as per sample format: just two names
-            }
+            { stringstream rs(rest); rs >> p0s >> p1s; }
             int p0id = p0s.empty() ? idx : getId(p0s);
             int p1id = p1s.empty() ? idx : getId(p1s);
 
@@ -143,7 +133,7 @@ struct program{
                     string xs; is >> xs;
                     insn.op = SWAP; insn.x = getId(xs); insn.y = 0;
                 } else {
-                    // default safe fallback
+                    // unknown => SWAP self as a safe default
                     insn.op = SWAP; insn.x = idx; insn.y = 0;
                 }
             }
@@ -153,35 +143,48 @@ struct program{
             d[idx].p1 = p1id;
         }
 
-        // ---- Read "CUR = <name>" after END
+        // ---- After END: read CUR and INPUT until EOF (order-insensitive)
         while (std::getline(in, line)) {
-            trim(line);
-            if (line.empty()) continue;
-            if (line.rfind("CUR", 0) == 0) {
-                size_t eq = line.find('=');
+            string t = line; trim(t);
+            if (t.empty()) continue;
+
+            if (t.rfind("CUR", 0) == 0) {
+                size_t eq = t.find('=');
                 if (eq != string::npos) {
-                    string cur = line.substr(eq+1);
-                    trim(cur);
+                    string cur = t.substr(eq+1); trim(cur);
                     n = getId(cur);
                 }
-                break;
+            } else if (t.rfind("INPUT", 0) == 0) {
+                size_t eq = t.find('=');
+                if (eq != string::npos) {
+                    string bits = t.substr(eq+1); trim(bits);
+                    for (char c : bits) {
+                        if (c == '0') input.push(false);
+                        else if (c == '1') input.push(true);
+                    }
+                }
             }
         }
-        // Optional convenience: fill known special nodes if present
+
+        // Fill conventional special nodes if present
         if (mp.count("S"))  S  = mp["S"];
         if (mp.count("I"))  I  = mp["I"];
         if (mp.count("O0")) O0 = mp["O0"];
         if (mp.count("O1")) O1 = mp["O1"];
     }
-    void init(){
-        n = S;
-    }
-}p;
+
+    void init(){ n = S; }
+} p;
+
 int main(){
     p.load();
-    p.print(1);
-    for(int i=0;i<32;i++){
+    p.init();
+    p.print(true);
+
+    // demo: step a bit and show CUR only
+    for(int i = 0; i < 32; i++){
         p.step();
-        p.print(0);
+        p.print(true);
     }
+    return 0;
 }
