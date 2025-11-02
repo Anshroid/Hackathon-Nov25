@@ -107,6 +107,40 @@ namespace Logic{
             connect0(ngz.t,t);
         }
     };
+    struct DuplicateGate{
+        int s,t;
+        void init(Bit x,Bit y, Bit z){// The r1&f of y&z are occupied, meaning they aren't writable.
+            s = newnode(NIL,x.b,-1);
+            connect0(x.bp0,y.r0);
+            connect0(x.bp1,y.f);
+            t = newnode(NIL,0,-1);
+            connect0(y.r1,z.r0);
+            connect0(y.f,z.f);
+            connect0(z.r1,t);
+            connect0(z.f,t);
+        }
+    };
+    struct HalfAdder{
+        int s,t;
+        Bit i0_d1,i1_d1,i0_d2,i1_d2;
+        DuplicateGate d0,d1;
+        XorGate x;
+        AndGate a;
+        void init(Bit i0,Bit i1,Bit o0,Bit o1){
+            i0_d1.init0();i1_d1.init0();
+            i0_d2.init0();i1_d2.init0();
+            d0.init(i0,i0_d1,i0_d2);
+            d1.init(i1,i1_d1,i1_d2);
+            s = newnode(NIL,d0.s,-1);
+            connect0(d0.t,d1.s);
+            x.init(i0_d1,i1_d1,o0);
+            a.init(i0_d2,i1_d2,o1);
+            connect0(d1.t,x.s);
+            connect0(x.t,a.s);
+            t = newnode(NIL,0,-1);
+            connect0(a.t,t);
+        }
+    };
 };
 void print(){
     for(int i=1;i<dcnt;i++){
@@ -122,17 +156,21 @@ int main(){
     names[0]="*";
     names[S]="S";names[I]="I";names[O0]="O0";names[O1]="O1";
     Logic::init();
-    Bit x,y,z;
-    x.init0();y.init0();z.init0();
+    Bit x,y,z,w;
+    x.init0();y.init0();z.init0();w.init0();
     int c1 = newnode(PUSH,I,x.r0,-1,0);
     int c2 = newnode(PUSH,I,x.f,I,0);
     connect0(S,c1); connect0(c1,c2);
     int c3 = newnode(PUSH,I,y.r0,-1,0);
     int c4 = newnode(PUSH,I,y.f,I,0);
     connect0(x.f,c3); connect0(x.r1,c3); connect0(c3,c4);
-    Logic::OrGate gate; gate.init(x,y,z);
-    connect0(y.f,gate.s); connect0(y.r1,gate.s);
-    connect0(gate.t,z.b);
+    Logic::HalfAdder ha; ha.init(x,y,z,w);
+    connect0(y.f,ha.s); connect0(y.r1,ha.s);
+    connect0(ha.t,z.b);
     connect0(z.bp0,O0); connect0(z.bp1,O1);
+    int c5 = newnode(PUSH,O0,0,w.b,0);
+    int c6 = newnode(PUSH,O1,0,c5,0);
+    connect0(O0,c6);connect0(O1,c6);
+    connect0(w.bp0,O0); connect0(w.bp1,O1);
     print();
 }
