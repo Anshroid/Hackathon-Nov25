@@ -41,6 +41,11 @@ struct Bit{
     }
 };
 namespace Logic{
+    Bit B0,B1;
+    void init(){
+        B0.init0();
+        B1.init1();
+    }
     struct XorGate{
         int s,t;
         int _r1,_r2;
@@ -60,6 +65,48 @@ namespace Logic{
             connect0(z.f,t);
         }
     };
+    struct AndGate{
+        int s,t;
+        void init(Bit x, Bit y, Bit z){
+            s = newnode(NIL,x.b,-1);
+            connect0(x.bp0,z.r0);
+            connect0(x.bp1,y.b);
+            connect0(y.bp0,z.r0);
+            connect0(y.bp1,z.f);
+            t = newnode(NIL,0,-1);
+            connect0(z.r1,t);
+            connect0(z.f,t);
+        }
+    };
+    struct NotGate{
+        int s,t;
+        void init(Bit x,Bit y){
+            s = newnode(NIL,x.b,-1);
+            connect0(x.bp0,y.f);
+            connect0(x.bp1,y.r0);
+            t = newnode(NIL,0,-1);
+            connect0(y.r1,t);
+            connect0(y.f,t);
+        }
+    };
+    struct OrGate{
+        int s,t;
+        Bit nx,ny,nz;
+        NotGate ngx,ngy,ngz;
+        AndGate a;
+        void init(Bit x,Bit y,Bit z){
+            nx.init0();ny.init0();nz.init0();
+            ngx.init(x,nx); ngy.init(y,ny);
+            a.init(nx,ny,nz);
+            ngz.init(nz,z);
+            s = newnode(NIL,ngx.s,-1);
+            t = newnode(NIL,0,-1);
+            connect0(ngx.t,ngy.s);
+            connect0(ngy.t,a.s);
+            connect0(a.t,ngz.s);
+            connect0(ngz.t,t);
+        }
+    };
 };
 void print(){
     for(int i=1;i<dcnt;i++){
@@ -74,6 +121,7 @@ int main(){
     int S = dcnt++, I = dcnt++, O0 = dcnt++, O1 = dcnt++;
     names[0]="*";
     names[S]="S";names[I]="I";names[O0]="O0";names[O1]="O1";
+    Logic::init();
     Bit x,y,z;
     x.init0();y.init0();z.init0();
     int c1 = newnode(PUSH,I,x.r0,-1,0);
@@ -82,7 +130,7 @@ int main(){
     int c3 = newnode(PUSH,I,y.r0,-1,0);
     int c4 = newnode(PUSH,I,y.f,I,0);
     connect0(x.f,c3); connect0(x.r1,c3); connect0(c3,c4);
-    Logic::XorGate gate; gate.init(x,y,z);
+    Logic::OrGate gate; gate.init(x,y,z);
     connect0(y.f,gate.s); connect0(y.r1,gate.s);
     connect0(gate.t,z.b);
     connect0(z.bp0,O0); connect0(z.bp1,O1);
