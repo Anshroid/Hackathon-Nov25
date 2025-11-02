@@ -41,6 +41,12 @@ struct Bit{
         f = newnode(SWAP,b,0,0,-1);
     }
 };
+struct Byte{
+    Bit bd[8];
+    void init0(){
+        for(int i=0;i<8;i++)bd[i].init0();
+    }
+};
 namespace Logic{
     Bit B0,B1;
     void init(){
@@ -142,6 +148,20 @@ namespace Logic{
             connect0(a.t,t);
         }
     };
+    struct ByteNot{
+        int s,t;
+        NotGate ng[8];
+        void init(Byte x,Byte y){
+            for(int i=0;i<8;i++)ng[i].init(x.bd[i],y.bd[i]);
+            s=newnode(NIL,0,0);
+            t=newnode(NIL,0,0);
+            connect0(s,ng[0].s);
+            for(int i=0;i<7;i++){
+                connect0(ng[i].t,ng[i+1].s);
+            }
+            connect0(ng[7].t,t);
+        }
+    };
 };
 namespace IO{
     struct Reader{
@@ -170,6 +190,32 @@ namespace IO{
             connect0(x.bp1,c4);
         }
     };
+    struct ByteReader{
+        Reader rd[8];
+        int s,t;
+        void init(Byte x){
+            s=newnode(NIL,0,0);
+            t=newnode(NIL,0,0);
+            for(int i=0;i<8;i++){
+                rd[i].init(x.bd[i]);
+            }
+            connect0(s,rd[0].s);
+            for(int i=0;i<7;i++)connect0(rd[i].t,rd[i+1].s);
+            connect0(rd[7].t,t);
+        }
+    };
+    struct ByteWriter{
+        Writer wd[8];
+        int s,t;
+        void init(Byte x){
+            s=newnode(NIL,0,0);
+            t=newnode(NIL,0,0);
+            for(int i=0;i<8;i++)wd[i].init(x.bd[i]);
+            connect0(s,wd[0].s);
+            for(int i=0;i<7;i++)connect0(wd[i].t,wd[i+1].s);
+            connect0(wd[7].t,t);
+        }
+    };
 };
 void print(){
     for(int i=1;i<dcnt;i++){
@@ -180,10 +226,7 @@ void print(){
         printf("%s %s\n",names[d[i].p0].c_str(),names[d[i].p1].c_str());
     }
 }
-int main(){
-    names[0]="*";
-    names[S]="S";names[I]="I";names[O0]="O0";names[O1]="O1";
-    Logic::init();
+void Test1(){
     Bit x,y,z,w;
     x.init0();y.init0();z.init0();w.init0();
     IO :: Reader rx,ry;
@@ -196,5 +239,23 @@ int main(){
     connect0(ha.t,wz.s);
     connect0(wz.t,ww.s);
     connect0(ww.t,0);
+    print();
+}
+int main(){
+    names[0]="*";
+    names[S]="S";names[I]="I";names[O0]="O0";names[O1]="O1";
+    Logic::init();
+    Byte x,y;
+    x.init0();y.init0();
+    IO::ByteReader rx;
+    rx.init(x);
+    connect0(S,rx.s);
+    Logic::ByteNot bn;
+    bn.init(x,y);
+    connect0(rx.t,bn.s);
+    IO::ByteWriter wy;
+    wy.init(y);
+    connect0(bn.t,wy.s);
+    connect0(wy.t,0);
     print();
 }

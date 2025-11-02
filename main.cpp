@@ -182,7 +182,7 @@ int main(){
     p.print(true);
     int halt = mp["*"];
     // demo: step a bit and show CUR only
-    for(int i = 0; i < 64; i++){
+    for(int i = 0; i < 256; i++){
         p.step();
         p.print(false);
         if(p.n==halt)break;
